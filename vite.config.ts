@@ -6,6 +6,8 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Relative paths, so the build works at https://<user>.github.io/period/ as well as locally.
+  base: './',
   plugins: [
     vue(),
     vueDevTools(),

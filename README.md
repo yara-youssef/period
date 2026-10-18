@@ -12,6 +12,12 @@ npm run dev      # http://localhost:5173
 npm run build    # type-check + production build into dist/
 ```
 
+## Hosting and phone use
+
+Every push to `main` builds the app and publishes it to GitHub Pages (`.github/workflows/deploy.yml`) at https://yara-youssef.github.io/period/. In the repository settings, Pages must use **GitHub Actions** as its source.
+
+On a phone, open that address and use **Add to Home Screen** (Safari's share menu on iPhone, the ⋮ menu in Chrome on Android) to install it as an app. It works offline after the first visit. Each browser or device keeps its own data, so move your data with **Download backup** on one device and **Restore backup** on the other.
+
 ## Getting your data in
 
 1. **Garmin.** On **Import & data**, drop any mix of files at once:

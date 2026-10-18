@@ -173,6 +173,14 @@ legend {
   justify-items: center;
   color: var(--text-secondary);
 }
+@media (max-width: 640px) {
+  .scale button {
+    font-size: 11px;
+    padding: 8px 1px;
+    hyphens: auto;
+    line-height: 1.2;
+  }
+}
 .scale .n {
   font-size: 18px;
   font-weight: 600;
