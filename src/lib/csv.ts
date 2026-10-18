@@ -48,7 +48,12 @@ export function parseNumber(raw: string | undefined): number | null {
 const GUESSES: [RegExp, string][] = [
   [/^(date|day|calendar ?date|datum|fecha)$/i, 'date'],
   [/mood/i, 'mood'],
+  [/social/i, 'social'],
   [/energy/i, 'energy'],
+  [/focus|concentrat/i, 'focus'],
+  [/appetite|craving|hunger/i, 'appetite'],
+  [/anxi/i, 'anxiety'],
+  [/physical|^body$/i, 'body'],
   [/deep/i, 'deepSleepMinutes'],
   [/rem/i, 'remSleepMinutes'],
   [/sleep.*score|score.*sleep/i, 'sleepScore'],

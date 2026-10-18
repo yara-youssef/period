@@ -87,6 +87,16 @@ export function addPeriod(date: string, length?: number) {
   state.periods = [...state.periods.filter((p) => p.date !== date), { date, length }].sort((a, b) => a.date.localeCompare(b.date))
 }
 
+/** Changes a period's start or bleeding length. Works for periods that came from logged bleeding too. */
+export function updatePeriod(date: string, changes: { date?: string; length?: number | null }) {
+  const current = periodStarts.value.find((p) => p.date === date)
+  const nextDate = changes.date || date
+  const length = changes.length === null ? undefined : (changes.length ?? state.periods.find((p) => p.date === date)?.length ?? current?.length)
+  state.periods = [...state.periods.filter((p) => p.date !== date && p.date !== nextDate), { date: nextDate, length }].sort((a, b) =>
+    a.date.localeCompare(b.date),
+  )
+}
+
 export function removePeriod(date: string) {
   state.periods = state.periods.filter((p) => p.date !== date)
   // Also clear logged flow from that bleed so the derived start goes away too.

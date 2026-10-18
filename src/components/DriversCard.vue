@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { METRIC_BY_KEY, PHASE_LABEL, fmt } from '@/lib/metrics'
-import { driverAnalysis } from '@/lib/stats'
-import type { Phase } from '@/lib/types'
+import { OUTCOMES, driverAnalysis } from '@/lib/stats'
+import type { MetricKey, Phase } from '@/lib/types'
 import { dayMap, joined } from '@/store'
 
 const scope = ref<Phase | null>('luteal')
-const outcome = ref<'mood' | 'energy'>('mood')
+const outcome = ref<MetricKey>('mood')
 
 const rows = computed(() =>
   driverAnalysis(joined.value, dayMap.value, scope.value)
@@ -35,16 +35,15 @@ function strength(r: number) {
   <section class="card">
     <div class="card-head">
       <div>
-        <h2>What moves your {{ outcome }}</h2>
+        <h2>What moves your {{ METRIC_BY_KEY[outcome].label.toLowerCase() }}</h2>
         <p class="sub">
-          Each row splits your days at the middle value of that metric (or into days you did / didn't do that activity) and compares {{ outcome }}.
+          Each row splits your days at the middle value of that metric (or into days you did / didn't do that activity) and compares {{ METRIC_BY_KEY[outcome].label.toLowerCase() }}.
         </p>
       </div>
       <div style="display: flex; gap: 10px; flex-wrap: wrap">
-        <div class="seg" role="group" aria-label="Outcome">
-          <button :aria-pressed="outcome === 'mood'" @click="outcome = 'mood'">Mood</button>
-          <button :aria-pressed="outcome === 'energy'" @click="outcome = 'energy'">Energy</button>
-        </div>
+        <select v-model="outcome" aria-label="Outcome">
+          <option v-for="k in OUTCOMES" :key="k" :value="k">{{ METRIC_BY_KEY[k].label }}</option>
+        </select>
         <div class="seg" role="group" aria-label="Days included">
           <button :aria-pressed="scope === 'luteal'" @click="scope = 'luteal'">{{ PHASE_LABEL.luteal }} days</button>
           <button :aria-pressed="scope === null" @click="scope = null">All days</button>
@@ -57,7 +56,7 @@ function strength(r: number) {
           <tr>
             <th>Metric</th>
             <th class="num">Split at</th>
-            <th class="num">{{ outcome }} when higher</th>
+            <th class="num">{{ METRIC_BY_KEY[outcome].short }} when higher</th>
             <th class="num">when lower</th>
             <th>Link</th>
           </tr>
@@ -76,7 +75,7 @@ function strength(r: number) {
             </td>
           </tr>
           <tr v-if="!rows.length">
-            <td colspan="5" class="muted">Needs at least 10 days with both {{ outcome }} and Garmin data{{ scope ? ' in the luteal phase' : '' }}.</td>
+            <td colspan="5" class="muted">Needs at least 10 days with both {{ METRIC_BY_KEY[outcome].label.toLowerCase() }} and Garmin data{{ scope ? ' in the luteal phase' : '' }}.</td>
           </tr>
         </tbody>
       </table>

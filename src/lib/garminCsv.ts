@@ -1,5 +1,6 @@
 import { guessColumn, parseCSV, parseNumber } from './csv'
 import { addDays, diffDays, normalizeDate } from './dates'
+import { METRIC_BY_KEY } from './metrics'
 import type { DayRecord, MetricKey } from './types'
 
 /**
@@ -106,7 +107,7 @@ function columnMetric(header: string, file: MetricKey | null): MetricKey | null 
     return null
   }
   const guess = guessColumn(h)
-  if (guess && guess !== 'date' && guess !== 'flow' && guess !== 'mood' && guess !== 'energy') return guess as MetricKey
+  if (guess && guess !== 'date' && guess !== 'flow' && METRIC_BY_KEY[guess as MetricKey]?.source === 'garmin') return guess as MetricKey
   if (file && /^(actual|avg|average|daily avg|value)$/i.test(h)) return file
   return null
 }

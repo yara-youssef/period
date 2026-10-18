@@ -34,17 +34,22 @@ export function derivePeriodStarts(manual: PeriodStart[], days: DayRecord[]): Pe
     last = date
   }
 
-  const all = [...manual, ...fromFlow].sort((a, b) => a.date.localeCompare(b.date))
-  const merged: PeriodStart[] = []
+  const all = [...manual.map((p) => ({ ...p, manual: true })), ...fromFlow.map((p) => ({ ...p, manual: false }))].sort((a, b) =>
+    a.date.localeCompare(b.date),
+  )
+  const merged: (PeriodStart & { manual: boolean })[] = []
   for (const p of all) {
     const prev = merged[merged.length - 1]
     if (prev && diffDays(p.date, prev.date) <= 10) {
-      prev.length = Math.max(prev.length ?? 0, p.length ?? 0, diffDays(p.date, prev.date) + (p.length ?? 1)) || undefined
+      // A length typed in by hand always wins over what logged bleeding implies.
+      if (p.manual && p.length) prev.length = diffDays(p.date, prev.date) + p.length
+      else if (!(prev.manual && prev.length)) prev.length = Math.max(prev.length ?? 0, diffDays(p.date, prev.date) + (p.length ?? 1))
+      prev.manual ||= p.manual
     } else {
       merged.push({ ...p })
     }
   }
-  return merged
+  return merged.map(({ manual: _, ...p }) => p)
 }
 
 function median(xs: number[]): number | null {

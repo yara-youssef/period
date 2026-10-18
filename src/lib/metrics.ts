@@ -25,6 +25,11 @@ const hm = (v: number) => {
 export const METRICS: MetricDef[] = [
   { key: 'mood', label: 'Mood', short: 'Mood', unit: '/5', higherIsBetter: true, source: 'manual', format: one, meaningful: 0.3 },
   { key: 'energy', label: 'Energy', short: 'Energy', unit: '/5', higherIsBetter: true, source: 'manual', format: one, meaningful: 0.3 },
+  { key: 'focus', label: 'Work focus', short: 'Focus', unit: '/5', higherIsBetter: true, source: 'manual', format: one, meaningful: 0.3 },
+  { key: 'social', label: 'Social energy', short: 'Social', unit: '/5', higherIsBetter: true, source: 'manual', format: one, meaningful: 0.3 },
+  { key: 'body', label: 'Physical feeling', short: 'Body', unit: '/5', higherIsBetter: true, source: 'manual', format: one, meaningful: 0.3 },
+  { key: 'anxiety', label: 'Anxiety', short: 'Anxiety', unit: '/5', higherIsBetter: false, source: 'manual', format: one, meaningful: 0.3 },
+  { key: 'appetite', label: 'Appetite & cravings', short: 'Appetite', unit: '/5', higherIsBetter: null, source: 'manual', format: one, meaningful: 0.3 },
   { key: 'sleepMinutes', label: 'Sleep duration', short: 'Sleep', unit: '', higherIsBetter: true, source: 'garmin', format: hm, meaningful: 15 },
   { key: 'sleepScore', label: 'Sleep score', short: 'Sleep score', unit: '', higherIsBetter: true, source: 'garmin', format: int, meaningful: 3 },
   { key: 'deepSleepMinutes', label: 'Deep sleep', short: 'Deep', unit: '', higherIsBetter: true, source: 'garmin', format: hm, meaningful: 8 },
@@ -77,4 +82,22 @@ export const SYMPTOMS = [
   'Poor sleep',
   'Back pain',
   'Tearful',
+]
+
+export interface ScaleDef {
+  key: MetricKey
+  label: string
+  /** Words for 1 to 5. */
+  words: [string, string, string, string, string]
+}
+
+/** The 1–5 scales logged by hand, in the order they are asked. */
+export const SCALES: ScaleDef[] = [
+  { key: 'mood', label: 'Mood', words: ['Awful', 'Low', 'Okay', 'Good', 'Great'] },
+  { key: 'energy', label: 'Energy', words: ['Drained', 'Tired', 'Steady', 'Good', 'Energised'] },
+  { key: 'focus', label: 'Work focus', words: ['Scattered', 'Distracted', 'Okay', 'Focused', 'Sharp'] },
+  { key: 'social', label: 'Social energy', words: ['Withdrawn', 'Low', 'Neutral', 'Sociable', 'Outgoing'] },
+  { key: 'body', label: 'Physical feeling', words: ['Awful', 'Rough', 'Okay', 'Good', 'Great'] },
+  { key: 'anxiety', label: 'Anxiety', words: ['Calm', 'Slight', 'Some', 'High', 'Overwhelming'] },
+  { key: 'appetite', label: 'Appetite & cravings', words: ['Very low', 'Low', 'Normal', 'Hungry', 'Strong cravings'] },
 ]

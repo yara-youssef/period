@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { addDays, longDate, todayISO } from '@/lib/dates'
-import { METRICS, PHASE_LABEL, SYMPTOMS, fmt } from '@/lib/metrics'
-import type { Flow } from '@/lib/types'
+import BackfillTable from '@/components/BackfillTable.vue'
+import { METRICS, PHASE_LABEL, SCALES, SYMPTOMS, fmt } from '@/lib/metrics'
+import type { DayRecord, Flow } from '@/lib/types'
 import { model, state, upsertDay } from '@/store'
 
 const today = todayISO()
@@ -10,11 +11,12 @@ const date = ref(today)
 const day = computed(() => state.days[date.value] ?? { date: date.value })
 const phase = computed(() => model.value.phases.get(date.value))
 
-const MOOD = ['Awful', 'Low', 'Okay', 'Good', 'Great']
-const ENERGY = ['Drained', 'Tired', 'Steady', 'Good', 'Energised']
+const mode = ref<'one' | 'many'>('one')
+const MOOD = SCALES[0]!.words
+const ENERGY = SCALES[1]!.words
 const FLOWS: Flow[] = ['none', 'spotting', 'light', 'medium', 'heavy']
 
-function set<K extends 'mood' | 'energy' | 'flow' | 'notes'>(key: K, value: (typeof day.value)[K]) {
+function set<K extends keyof DayRecord>(key: K, value: DayRecord[K]) {
   // Clicking the selected value again clears it.
   upsertDay(date.value, { [key]: day.value[key] === value ? undefined : value })
 }
@@ -34,7 +36,20 @@ const recent = computed(() =>
 </script>
 
 <template>
-  <div class="log">
+  <div class="mode seg" role="group" aria-label="Logging mode">
+    <button :aria-pressed="mode === 'one'" @click="mode = 'one'">One day</button>
+    <button :aria-pressed="mode === 'many'" @click="mode = 'many'">Many days (catch up)</button>
+  </div>
+  <BackfillTable
+    v-if="mode === 'many'"
+    @open="
+      (d: string) => {
+        date = d
+        mode = 'one'
+      }
+    "
+  />
+  <div v-else class="log">
     <section class="card stack">
       <div class="card-head" style="margin-bottom: 0">
         <div>
@@ -51,20 +66,11 @@ const recent = computed(() =>
         </div>
       </div>
 
-      <fieldset>
-        <legend>Mood</legend>
+      <fieldset v-for="sc in SCALES" :key="sc.key">
+        <legend>{{ sc.label }}</legend>
         <div class="scale">
-          <button v-for="(l, i) in MOOD" :key="l" :aria-pressed="day.mood === i + 1" @click="set('mood', i + 1)">
-            <span class="n">{{ i + 1 }}</span>{{ l }}
-          </button>
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend>Energy</legend>
-        <div class="scale">
-          <button v-for="(l, i) in ENERGY" :key="l" :aria-pressed="day.energy === i + 1" @click="set('energy', i + 1)">
-            <span class="n">{{ i + 1 }}</span>{{ l }}
+          <button v-for="(w, i) in sc.words" :key="w" :aria-pressed="day[sc.key] === i + 1" @click="set(sc.key, i + 1)">
+            <span class="n">{{ i + 1 }}</span>{{ w }}
           </button>
         </div>
       </fieldset>
@@ -128,6 +134,9 @@ const recent = computed(() =>
 </template>
 
 <style scoped>
+.mode {
+  margin-bottom: 16px;
+}
 .log {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);

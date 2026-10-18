@@ -113,7 +113,8 @@ export interface Insight {
   action?: string
 }
 
-const OUTCOMES: MetricKey[] = ['mood', 'energy']
+/** Logged scales where higher is better, so 'what goes with better days' has a clear meaning. */
+export const OUTCOMES: MetricKey[] = ['mood', 'energy', 'focus', 'social', 'body']
 
 interface Driver {
   key: MetricKey
@@ -289,7 +290,7 @@ export function buildInsights(rows: JoinedDay[], byDate: Map<string, DayRecord>)
   }
 
   // 4. Symptoms that cluster in the luteal phase.
-  const logged = rows.filter((r) => r.symptoms !== undefined || r.mood !== undefined)
+  const logged = rows.filter((r) => r.symptoms !== undefined || OUTCOMES.some((k) => r[k] !== undefined))
   const lutealLogged = logged.filter((r) => r.ph.phase === 'luteal')
   const otherLogged = logged.filter((r) => r.ph.phase !== 'luteal' && r.ph.phase !== 'menstrual')
   if (lutealLogged.length >= 7 && otherLogged.length >= 7) {
