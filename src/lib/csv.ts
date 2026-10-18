@@ -1,5 +1,6 @@
 /** Small RFC 4180 parser: quoted fields, escaped quotes, commas/semicolons/tabs. */
 export function parseCSV(text: string): string[][] {
+  text = text.replace(/^\uFEFF/, '')
   const firstLine = text.slice(0, text.indexOf('\n') >>> 0)
   const delimiter = [',', ';', '\t'].sort((a, b) => firstLine.split(b).length - firstLine.split(a).length)[0]!
   const rows: string[][] = []

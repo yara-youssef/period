@@ -113,10 +113,20 @@ function extract(o: Obj): { date: string; rec: Partial<DayRecord>; add?: Partial
     if (!date || d == null) return null
     // Exports store milliseconds; the Connect API uses seconds.
     const minutes = d > 50_000 ? d / 60_000 : d / 60
-    return { date, rec: {}, add: { workoutMinutes: minutes } }
+    const rawType = typeof o.activityType === 'string' ? o.activityType : ((o.activityType as Obj | undefined)?.typeKey as string | undefined)
+    return { date, rec: {}, add: { workoutMinutes: minutes, activityTypes: rawType ? [prettyType(rawType)] : [] } }
   }
 
   return null
+}
+
+/** "treadmill_running" → "Treadmill Running", matching the names in Garmin's Activities.csv. */
+function prettyType(t: string): string {
+  return t
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((w) => w[0]!.toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ')
 }
 
 function walk(node: unknown, visit: (o: Obj) => boolean, depth = 0) {
@@ -143,7 +153,8 @@ export function importGarminJSON(text: string, into: ImportResult) {
     into.recognised++
     const day = into.days.get(hit.date) ?? {}
     Object.assign(day, hit.rec)
-    if (hit.add?.workoutMinutes) day.workoutMinutes = (day.workoutMinutes ?? 0) + hit.add.workoutMinutes
+    if (hit.add?.workoutMinutes) day.workoutMinutes = Math.round((day.workoutMinutes ?? 0) + hit.add.workoutMinutes)
+    for (const t of hit.add?.activityTypes ?? []) if (!day.activityTypes?.includes(t)) day.activityTypes = [...(day.activityTypes ?? []), t]
     into.days.set(hit.date, day)
     return true
   })
