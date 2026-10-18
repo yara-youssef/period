@@ -8,11 +8,11 @@ import InfoView from './views/InfoView.vue'
 import LogView from './views/LogView.vue'
 
 const TABS = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'log', label: 'Log today' },
-  { key: 'cycles', label: 'Cycles' },
-  { key: 'info', label: 'Information' },
-  { key: 'import', label: 'Import & data' },
+  { key: 'dashboard', label: 'Dashboard', short: 'Dashboard' },
+  { key: 'log', label: 'Log today', short: 'Log' },
+  { key: 'cycles', label: 'Cycles', short: 'Cycles' },
+  { key: 'info', label: 'Information', short: 'Info' },
+  { key: 'import', label: 'Import & data', short: 'Data' },
 ] as const
 type Tab = (typeof TABS)[number]['key']
 
@@ -51,7 +51,9 @@ const nextTheme = () => (theme.value = theme.value === 'system' ? 'dark' : theme
       <h1>Cycle Insights</h1>
     </div>
     <nav aria-label="Sections">
-      <a v-for="t in TABS" :key="t.key" :href="'#' + t.key" :aria-current="tab === t.key ? 'page' : undefined">{{ t.label }}</a>
+      <a v-for="t in TABS" :key="t.key" :href="'#' + t.key" :aria-current="tab === t.key ? 'page' : undefined">
+        <span class="long">{{ t.label }}</span><span class="short">{{ t.short }}</span>
+      </a>
     </nav>
     <button class="btn theme" :aria-label="`Theme: ${theme}`" :title="`Theme: ${theme}`" @click="nextTheme">
       {{ theme === 'system' ? 'Auto' : theme === 'dark' ? 'Dark' : 'Light' }}
@@ -123,13 +125,46 @@ footer {
   text-align: center;
   padding: 0 16px 32px;
 }
+.short {
+  display: none;
+}
+.top {
+  padding-top: max(12px, env(safe-area-inset-top));
+}
 @media (max-width: 640px) {
+  /* Tabs move to a bottom bar, within thumb reach. */
   nav {
-    order: 3;
-    flex-basis: 100%;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    justify-content: space-around;
+    gap: 0;
+    padding: 6px 4px max(6px, env(safe-area-inset-bottom));
+    background: var(--page);
+    border-top: 1px solid var(--border);
+  }
+  nav a {
+    flex: 1;
+    text-align: center;
+    padding: 10px 2px;
+    font-size: 13px;
+  }
+  .long {
+    display: none;
+  }
+  .short {
+    display: inline;
   }
   .brand {
     flex: 1;
+  }
+  main {
+    padding-bottom: 24px;
+  }
+  footer {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
   }
 }
 </style>

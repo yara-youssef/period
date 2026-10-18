@@ -98,6 +98,6 @@ export const SCALES: ScaleDef[] = [
   { key: 'focus', label: 'Work focus', words: ['Scattered', 'Distracted', 'Okay', 'Focused', 'Sharp'] },
   { key: 'social', label: 'Social energy', words: ['Withdrawn', 'Low', 'Neutral', 'Sociable', 'Outgoing'] },
   { key: 'body', label: 'Physical feeling', words: ['Awful', 'Rough', 'Okay', 'Good', 'Great'] },
-  { key: 'anxiety', label: 'Anxiety', words: ['Calm', 'Slight', 'Some', 'High', 'Overwhelming'] },
+  { key: 'anxiety', label: 'Anxiety', words: ['Calm', 'Slight', 'Some', 'High', 'Very high'] },
   { key: 'appetite', label: 'Appetite & cravings', words: ['Very low', 'Low', 'Normal', 'Hungry', 'Strong cravings'] },
 ]
