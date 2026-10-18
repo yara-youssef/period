@@ -7,7 +7,7 @@ import { importGarminFiles } from '@/lib/garmin'
 import { readGarminCsv } from '@/lib/garminCsv'
 import { METRICS, METRIC_BY_KEY } from '@/lib/metrics'
 import type { DayRecord, Flow } from '@/lib/types'
-import { clearAll, exportBackup, mergeDays, replaceAll, state } from '@/store'
+import { clearAll, daysSinceBackup, exportBackup, mergeDays, replaceAll, state } from '@/store'
 
 const emit = defineEmits<{ go: [tab: string] }>()
 
@@ -262,7 +262,8 @@ function wipe() {
         <button class="btn danger" @click="wipe">Delete all data</button>
       </div>
       <p v-if="backupMsg" class="sub" style="margin-top: 10px">{{ backupMsg }}</p>
-      <p class="sub" style="margin-top: 10px">{{ Object.keys(state.days).length }} days stored{{ state.demo ? ' (demo)' : '' }}.</p>
+      <p class="sub" style="margin-top: 10px">{{ Object.keys(state.days).length }} days stored{{ state.demo ? ' (demo)' : '' }}.
+        {{ daysSinceBackup == null ? 'No backup downloaded yet.' : daysSinceBackup === 0 ? 'Last backup: today.' : `Last backup: ${daysSinceBackup} days ago.` }}</p>
     </section>
   </div>
 </template>

@@ -162,6 +162,11 @@ button {
   font-size: 14px;
 }
 
+a.btn {
+  color: inherit;
+  text-decoration: none;
+}
+
 .btn:hover {
   background: var(--surface-2);
 }

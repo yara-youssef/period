@@ -1,8 +1,8 @@
-import type { Phase } from './types'
+import type { DayPhase, Phase } from './types'
 
 /**
- * Phase-by-phase recommendations from the books in /books, paraphrased.
- * Page numbers are pages of those PDF copies (ebook conversions), not of the print editions.
+ * Phase-by-phase recommendations from two books, paraphrased.
+ * Page numbers are pages of the ebook (PDF) editions they were taken from, not of the print editions.
  */
 
 export type BookId = 'vitti' | 'pelz'
@@ -257,3 +257,10 @@ export const DISAGREEMENTS: Disagreement[] = [
     ],
   },
 ]
+
+/** The guide section for a day. The luteal phase splits ~10 days before the period, where Pelz's Nurture phase begins. */
+export function guideKeyFor(ph: DayPhase | null | undefined): GuideKey | null {
+  if (!ph) return null
+  if (ph.phase !== 'luteal') return ph.phase
+  return ph.daysToNext >= -10 ? 'luteal-late' : 'luteal-early'
+}

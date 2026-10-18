@@ -11,6 +11,8 @@ interface Persisted {
   days: Record<string, DayRecord>
   periods: PeriodStart[]
   demo: boolean
+  /** Date of the last downloaded backup. */
+  lastBackup?: string
 }
 
 function load(): Persisted {
@@ -18,7 +20,7 @@ function load(): Persisted {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Persisted>
-      return { days: parsed.days ?? {}, periods: parsed.periods ?? [], demo: parsed.demo ?? false }
+      return { days: parsed.days ?? {}, periods: parsed.periods ?? [], demo: parsed.demo ?? false, lastBackup: parsed.lastBackup }
     }
   } catch {
     // Storage blocked or corrupt: start empty rather than fail.
@@ -117,8 +119,19 @@ export function clearAll() {
 }
 
 export function exportBackup(): string {
+  state.lastBackup = todayISO()
   return JSON.stringify({ version: 1, ...state }, null, 2)
 }
+
+/** Days since the last backup, or null if there has never been one. */
+export const daysSinceBackup = computed(() => (state.lastBackup ? diffDays(todayISO(), state.lastBackup) : null))
+
+/** True once there's hand-logged data worth protecting and no backup in the last 30 days. */
+export const backupDue = computed(() => {
+  if (state.demo) return false
+  const logged = Object.values(state.days).filter((d) => d.mood != null || d.energy != null || d.notes).length
+  return logged >= 7 && (daysSinceBackup.value == null || daysSinceBackup.value > 30)
+})
 
 /** Metrics with enough data to chart, in registry order. */
 export const availableMetrics = computed(() => {

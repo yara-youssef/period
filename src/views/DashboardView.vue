@@ -7,6 +7,7 @@ import NowCard from '@/components/NowCard.vue'
 import PhaseTable from '@/components/PhaseTable.vue'
 import ProfileCard from '@/components/ProfileCard.vue'
 import TimelineCard from '@/components/TimelineCard.vue'
+import TodayStrip from '@/components/TodayStrip.vue'
 import type { MetricKey } from '@/lib/types'
 import { availableMetrics, state, weeklyMetrics } from '@/store'
 
@@ -44,6 +45,7 @@ const emit = defineEmits<{ go: [tab: string] }>()
     </div>
 
     <NowCard />
+    <TodayStrip />
     <div class="grid-2">
       <InsightsCard />
     </div>

@@ -99,6 +99,11 @@ export function generateDemo(): { days: DayRecord[]; periods: PeriodStart[] } {
           ? {
               mood: Math.round(clamp(moodRaw, 1, 5)),
               energy: Math.round(clamp(energyRaw, 1, 5)),
+              focus: Math.round(clamp(3.5 - 0.2 * luteal - 0.5 * late - 0.4 * mens + 0.3 * ovu + (sleep - 445) / 100 + 0.5 * normal(), 1, 5)),
+              social: Math.round(clamp(3.3 - 0.3 * luteal - 0.6 * late - 0.5 * mens + 0.8 * ovu + 0.5 * normal(), 1, 5)),
+              body: Math.round(clamp(3.8 - 0.3 * luteal - 0.7 * late - 1.1 * mens + 0.2 * ovu + 0.5 * normal(), 1, 5)),
+              anxiety: Math.round(clamp(2.0 + 0.3 * luteal + 0.8 * late + (stress - 30) / 15 + 0.5 * normal(), 1, 5)),
+              appetite: Math.round(clamp(3.0 + 0.4 * luteal + 0.9 * late - 0.3 * ovu + 0.5 * normal(), 1, 5)),
               symptoms,
               flow,
             }
