@@ -4,12 +4,14 @@ import LogoMark from './components/LogoMark.vue'
 import CyclesView from './views/CyclesView.vue'
 import DashboardView from './views/DashboardView.vue'
 import ImportView from './views/ImportView.vue'
+import InfoView from './views/InfoView.vue'
 import LogView from './views/LogView.vue'
 
 const TABS = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'log', label: 'Log today' },
   { key: 'cycles', label: 'Cycles' },
+  { key: 'info', label: 'Information' },
   { key: 'import', label: 'Import & data' },
 ] as const
 type Tab = (typeof TABS)[number]['key']
@@ -59,6 +61,7 @@ const nextTheme = () => (theme.value = theme.value === 'system' ? 'dark' : theme
     <DashboardView v-if="tab === 'dashboard'" @go="go" />
     <LogView v-else-if="tab === 'log'" />
     <CyclesView v-else-if="tab === 'cycles'" />
+    <InfoView v-else-if="tab === 'info'" />
     <ImportView v-else @go="go" />
   </main>
   <footer class="sub">Your data stays in this browser. Patterns shown are correlations in your own data, not medical advice.</footer>
