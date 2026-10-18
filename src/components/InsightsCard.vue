@@ -41,7 +41,7 @@ const ICON = { good: '↑', bad: '↓', neutral: '•' } as const
     <ol v-if="actions.length" class="actions">
       <li v-for="a in actions" :key="a.action">
         <strong>{{ a.action }}</strong>
-        <span v-for="r in a.reasons" :key="r" class="sub" style="display: block">{{ r }}.</span>
+        <span v-for="r in a.reasons.slice(0, 2)" :key="r" class="sub" style="display: block">{{ r }}.</span>
       </li>
     </ol>
     <p v-else class="sub">

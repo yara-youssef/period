@@ -1,18 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { todayISO } from '@/lib/dates'
-import { BOOKS, DISAGREEMENTS, GUIDES, TOPICS, type GuideKey, type Ref, type Topic } from '@/lib/guidance'
+import { BOOKS, DISAGREEMENTS, GUIDES, TOPICS, guideKeyFor, type GuideKey, type Ref, type Topic } from '@/lib/guidance'
 import { insights, model } from '@/store'
 
 const now = computed(() => model.value.phases.get(todayISO()) ?? null)
 
-/** Today's guide section; the luteal phase is split at ~10 days before the period, where Pelz's Nurture phase begins. */
-const currentKey = computed<GuideKey | null>(() => {
-  const p = now.value
-  if (!p) return null
-  if (p.phase !== 'luteal') return p.phase
-  return p.daysToNext >= -10 ? 'luteal-late' : 'luteal-early'
-})
+const currentKey = computed(() => guideKeyFor(now.value))
 
 const selected = ref<GuideKey>(currentKey.value ?? 'luteal-late')
 const topic = ref<Topic | 'all'>('all')
@@ -138,7 +132,7 @@ function cite(r: Ref) {
         </li>
       </ul>
       <p class="sub" style="margin-top: 12px">
-        Page numbers refer to the PDF copies in the repository's <code>books/</code> folder, which may not match the printed editions. These are the authors'
+        Page numbers refer to the ebook (PDF) editions the recommendations were taken from and may not match the printed books. These are the authors'
         recommendations, paraphrased; they aren't medical advice. Check anything significant (fasting, supplements, cutting out foods) with a doctor, and use
         the dashboard to see what actually helps you.
       </p>
