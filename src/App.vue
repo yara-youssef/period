@@ -1,11 +1,144 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { ref, watchEffect } from 'vue'
+import CyclesView from './views/CyclesView.vue'
+import DashboardView from './views/DashboardView.vue'
+import ImportView from './views/ImportView.vue'
+import LogView from './views/LogView.vue'
+
+const TABS = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'log', label: 'Log today' },
+  { key: 'cycles', label: 'Cycles' },
+  { key: 'import', label: 'Import & data' },
+] as const
+type Tab = (typeof TABS)[number]['key']
+
+const fromHash = () => (TABS.find((t) => '#' + t.key === location.hash)?.key ?? 'dashboard') as Tab
+const tab = ref<Tab>(fromHash())
+window.addEventListener('hashchange', () => (tab.value = fromHash()))
+function go(t: string) {
+  location.hash = t
+}
+
+type Theme = 'system' | 'light' | 'dark'
+const readTheme = (): Theme => {
+  try {
+    return (localStorage.getItem('cycle-insights:theme') as Theme) || 'system'
+  } catch {
+    return 'system'
+  }
+}
+const theme = ref<Theme>(readTheme())
+watchEffect(() => {
+  if (theme.value === 'system') document.documentElement.removeAttribute('data-theme')
+  else document.documentElement.setAttribute('data-theme', theme.value)
+  try {
+    localStorage.setItem('cycle-insights:theme', theme.value)
+  } catch {
+    // Theme still applies for this visit.
+  }
+})
+const nextTheme = () => (theme.value = theme.value === 'system' ? 'dark' : theme.value === 'dark' ? 'light' : 'system')
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <span class="phase-dot phase-menstrual" /><span class="phase-dot phase-follicular" /><span class="phase-dot phase-ovulatory" /><span
+          class="phase-dot phase-luteal"
+        />
+      </span>
+      <h1>Cycle Insights</h1>
+    </div>
+    <nav aria-label="Sections">
+      <a v-for="t in TABS" :key="t.key" :href="'#' + t.key" :aria-current="tab === t.key ? 'page' : undefined">{{ t.label }}</a>
+    </nav>
+    <button class="btn theme" :aria-label="`Theme: ${theme}`" :title="`Theme: ${theme}`" @click="nextTheme">
+      {{ theme === 'system' ? 'Auto' : theme === 'dark' ? 'Dark' : 'Light' }}
+    </button>
+  </header>
+  <main>
+    <DashboardView v-if="tab === 'dashboard'" @go="go" />
+    <LogView v-else-if="tab === 'log'" />
+    <CyclesView v-else-if="tab === 'cycles'" />
+    <ImportView v-else @go="go" />
+  </main>
+  <footer class="sub">Your data stays in this browser. Patterns shown are correlations in your own data, not medical advice.</footer>
 </template>
 
-<style scoped></style>
+<style scoped>
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px max(16px, calc((100vw - 1200px) / 2));
+  background: var(--page);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand h1 {
+  font-size: 18px;
+}
+.logo {
+  display: grid;
+  grid-template-columns: repeat(2, 8px);
+  gap: 2px;
+}
+.logo .phase-dot {
+  width: 8px;
+  height: 8px;
+}
+nav {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  flex: 1;
+}
+nav a {
+  text-decoration: none;
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+nav a:hover {
+  background: var(--surface-2);
+}
+nav a[aria-current='page'] {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.theme {
+  font-size: 13px;
+  padding: 5px 10px;
+}
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+}
+footer {
+  text-align: center;
+  padding: 0 16px 32px;
+}
+@media (max-width: 640px) {
+  nav {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .brand {
+    flex: 1;
+  }
+}
+</style>
