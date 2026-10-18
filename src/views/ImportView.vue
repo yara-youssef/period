@@ -1,54 +1,100 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { guessColumn, parseCSV, parseNumber } from '@/lib/csv'
-import { normalizeDate } from '@/lib/dates'
+import { normalizeDate, todayISO } from '@/lib/dates'
 import { generateDemo } from '@/lib/demo'
 import { importGarminFiles } from '@/lib/garmin'
-import { METRICS } from '@/lib/metrics'
+import { readGarminCsv } from '@/lib/garminCsv'
+import { METRICS, METRIC_BY_KEY } from '@/lib/metrics'
 import type { DayRecord, Flow } from '@/lib/types'
 import { clearAll, exportBackup, mergeDays, replaceAll, state } from '@/store'
 
 const emit = defineEmits<{ go: [tab: string] }>()
 
-// ---- Garmin export
-const garminBusy = ref(false)
-const garminMsg = ref('')
+// ---- files: Garmin zip / JSON / Connect CSVs, any mix, many at once
+interface FileReport {
+  name: string
+  text: string
+  tone: 'ok' | 'warn' | 'error'
+}
+const busy = ref(false)
 const dragging = ref(false)
+const reports = ref<FileReport[]>([])
+/** CSVs that weren't recognised, waiting for manual column mapping. */
+const pending = ref<{ name: string; text: string }[]>([])
 
-async function onGarmin(files: FileList | File[] | null) {
-  if (!files || !files.length) return
-  garminBusy.value = true
-  garminMsg.value = 'Reading…'
+const cleanName = (n: string) => n.replace(/^[0-9a-f]{8}-/, '')
+
+async function onFiles(list: FileList | File[] | null) {
+  if (!list || !list.length) return
+  const files = [...list]
+  busy.value = true
+  reports.value = []
+  if (state.demo) clearAll()
+  const today = todayISO()
   try {
-    const res = await importGarminFiles([...files])
-    if (state.demo) clearAll()
-    const n = mergeDays(res.days)
-    const dates = [...res.days.keys()].sort()
-    garminMsg.value = n
-      ? `Imported ${n} days (${dates[0]} to ${dates[dates.length - 1]}) from ${res.files} files.`
-      : `Read ${res.files} JSON files but found no daily summaries or sleep data. Try the CSV importer below, or check you exported "All data".`
+    const garmin = files.filter((f) => /\.(zip|json)$/i.test(f.name))
+    if (garmin.length) {
+      const res = await importGarminFiles(garmin)
+      const n = mergeDays(res.days)
+      const dates = [...res.days.keys()].sort()
+      reports.value.push({
+        name: garmin.length === 1 ? garmin[0]!.name : `${garmin.length} Garmin export files`,
+        text: n
+          ? `${n} days of daily data, ${dates[0]} to ${dates[dates.length - 1]}.`
+          : `No daily summaries or sleep data found in ${res.files} JSON files.`,
+        tone: n ? 'ok' : 'error',
+      })
+    }
+    for (const f of files.filter((f) => /\.(csv|tsv|txt)$/i.test(f.name))) {
+      const text = await f.text()
+      const res = readGarminCsv(cleanName(f.name), text, today)
+      if (!res) {
+        pending.value.push({ name: cleanName(f.name), text })
+        reports.value.push({ name: cleanName(f.name), text: 'Not a format I recognise. Map its columns below.', tone: 'warn' })
+        continue
+      }
+      const n = mergeDays(res.days, { weekly: res.kind === 'weekly' })
+      const labels = res.metrics.map((k) => METRIC_BY_KEY[k].label.toLowerCase()).join(', ')
+      reports.value.push({
+        name: cleanName(f.name),
+        text:
+          res.kind === 'activities'
+            ? `Workouts and activity types for ${n} days.`
+            : res.kind === 'weekly'
+              ? `Weekly ${labels}, spread across ${n} days as an estimate. Daily data will replace it.`
+              : `Daily ${labels} for ${n} days.`,
+        tone: res.kind === 'weekly' ? 'warn' : 'ok',
+      })
+    }
+    for (const f of files.filter((f) => !/\.(zip|json|csv|tsv|txt)$/i.test(f.name))) {
+      reports.value.push({ name: f.name, text: 'Skipped: only .zip, .json and .csv files are read.', tone: 'error' })
+    }
   } catch (e) {
-    garminMsg.value = `Couldn't read that file: ${(e as Error).message}`
+    reports.value.push({ name: 'Import', text: `Something went wrong: ${(e as Error).message}`, tone: 'error' })
   } finally {
-    garminBusy.value = false
+    busy.value = false
   }
+  if (pending.value.length && !csvRows.value.length) openPending()
 }
 
 function onDrop(e: DragEvent) {
   dragging.value = false
-  onGarmin(e.dataTransfer?.files ?? null)
+  onFiles(e.dataTransfer?.files ?? null)
 }
 
-// ---- CSV
+// ---- manual CSV mapping for anything not recognised
+const csvName = ref('')
 const csvRows = ref<string[][]>([])
 const mapping = ref<string[]>([])
 const csvMsg = ref('')
 const TARGETS = [{ key: '', label: 'Ignore' }, { key: 'date', label: 'Date' }, ...METRICS.map((m) => ({ key: m.key, label: m.label })), { key: 'flow', label: 'Bleeding (flow)' }]
 
-async function onCSV(e: Event) {
-  const f = (e.target as HTMLInputElement).files?.[0]
-  if (!f) return
-  csvRows.value = parseCSV(await f.text())
+function openPending() {
+  const next = pending.value.shift()
+  if (!next) return
+  csvName.value = next.name
+  csvRows.value = parseCSV(next.text)
   mapping.value = (csvRows.value[0] ?? []).map(guessColumn)
   csvMsg.value = ''
 }
@@ -86,10 +132,15 @@ function importCSV() {
       out.set(date, rec)
     }
   })
-  if (state.demo) clearAll()
   const n = mergeDays(out)
-  csvMsg.value = `Imported ${n} days.`
+  reports.value.push({ name: csvName.value, text: `Imported ${n} days.`, tone: 'ok' })
   csvRows.value = []
+  openPending()
+}
+
+function skipCSV() {
+  csvRows.value = []
+  openPending()
 }
 
 // ---- backup & demo
@@ -131,53 +182,72 @@ function wipe() {
 <template>
   <div class="stack">
     <section class="card">
-      <h2>Garmin export</h2>
-      <ol class="sub steps">
-        <li>
-          On <a href="https://www.garmin.com/account/datamanagement/exportdata/" target="_blank" rel="noopener">Garmin Account → Data Management → Export Your Data</a>, request
-          an export. Garmin emails you a link, usually within a day or two.
-        </li>
-        <li>Drop the downloaded <code>.zip</code> here as-is. It's read in your browser; nothing is uploaded anywhere.</li>
-        <li>Re-import whenever you want fresh data. New values merge with what you've logged by hand.</li>
-      </ol>
+      <h2>Garmin data</h2>
+      <p class="sub" style="margin: 4px 0 12px">Drop any mix of files, as many as you like. They're read in your browser; nothing is uploaded anywhere.</p>
       <label class="drop" :class="{ dragging }" @dragover.prevent="dragging = true" @dragleave="dragging = false" @drop.prevent="onDrop">
-        <input type="file" accept=".zip,.json" multiple class="sr-only" @change="onGarmin(($event.target as HTMLInputElement).files)" />
-        <strong>{{ garminBusy ? 'Reading…' : 'Choose or drop your Garmin .zip' }}</strong>
-        <span class="sub">or individual JSON files from inside it (UDSFile, sleepData, summarizedActivities)</span>
+        <input type="file" accept=".zip,.json,.csv,.tsv,.txt" multiple class="sr-only" @change="onFiles(($event.target as HTMLInputElement).files)" />
+        <strong>{{ busy ? 'Reading…' : 'Choose or drop files' }}</strong>
+        <span class="sub">Garmin export .zip, JSON files from it, or CSVs from Garmin Connect (Activities, Steps, Sleep, Intensity Minutes, Calories, Stress…)</span>
       </label>
-      <p v-if="garminMsg" class="sub" style="margin-top: 10px">{{ garminMsg }}</p>
-      <p class="sub" style="margin-top: 10px">
-        Reads steps, intensity minutes, workouts, active calories, sleep (duration, stages, score), resting HR, HRV, stress and Body Battery.
-      </p>
+
+      <ul v-if="reports.length" class="reports">
+        <li v-for="(r, i) in reports" :key="i">
+          <span class="badge" :class="r.tone">{{ r.tone === 'ok' ? '✓' : r.tone === 'warn' ? '!' : '×' }}</span>
+          <div>
+            <strong>{{ r.name }}</strong>
+            <div class="sub">{{ r.text }}</div>
+          </div>
+        </li>
+      </ul>
+
+      <details class="help" :open="reports.some((r) => r.tone === 'warn')">
+        <summary>Which files give the best results?</summary>
+        <ul class="sub steps">
+          <li>
+            <strong>Best: the full export.</strong> Request it at
+            <a href="https://www.garmin.com/account/datamanagement/exportdata/" target="_blank" rel="noopener">Garmin Account → Export Your Data</a>. It has every day,
+            plus resting HR, HRV, stress and Body Battery.
+          </li>
+          <li>
+            <strong>Activities.csv</strong> (Garmin Connect → Activities → Export CSV) is already per workout, so workout time and type (yoga, running…) are exact.
+          </li>
+          <li>
+            <strong>Report CSVs</strong> (Steps, Sleep, Intensity Minutes…) are <em>weekly</em> when you pick a 1-year range. Phase analysis needs single days, so
+            weekly values are only an estimate and are left out of the "what helps" findings. Choosing the <strong>4 Weeks</strong> range before exporting should
+            give one row per day; export a few 4-week blocks to cover more time.
+          </li>
+          <li>Re-import whenever you like. Newer daily data replaces weekly estimates and never overwrites your mood logs.</li>
+        </ul>
+      </details>
     </section>
 
-    <section class="card">
-      <h2>CSV file</h2>
-      <p class="sub" style="margin: 4px 0 12px">For Garmin Connect report exports, or mood you tracked in another app. You choose which column is which.</p>
-      <input type="file" accept=".csv,.tsv,.txt" @change="onCSV" />
-      <div v-if="header.length" style="margin-top: 14px">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th v-for="(h, i) in header" :key="i">
-                  <div style="margin-bottom: 4px">{{ h }}</div>
-                  <select v-model="mapping[i]" :aria-label="`Column ${h}`">
-                    <option v-for="t in TARGETS" :key="t.key" :value="t.key">{{ t.label }}</option>
-                  </select>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(r, i) in preview" :key="i">
-                <td v-for="(c, j) in r" :key="j" class="sub">{{ c }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <button class="btn primary" style="margin-top: 10px" @click="importCSV">Import {{ csvRows.length - 1 }} rows</button>
+    <section v-if="csvRows.length" class="card">
+      <h2>Map the columns of {{ csvName }}</h2>
+      <p class="sub" style="margin: 4px 0 12px">Tell me which column is which. Leave anything else on Ignore.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th v-for="(h, i) in header" :key="i">
+                <div style="margin-bottom: 4px">{{ h }}</div>
+                <select v-model="mapping[i]" :aria-label="`Column ${h}`">
+                  <option v-for="t in TARGETS" :key="t.key" :value="t.key">{{ t.label }}</option>
+                </select>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(r, i) in preview" :key="i">
+              <td v-for="(c, j) in r" :key="j" class="sub">{{ c }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <p v-if="csvMsg" class="sub" style="margin-top: 10px">{{ csvMsg }}</p>
+      <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center">
+        <button class="btn primary" @click="importCSV">Import {{ csvRows.length - 1 }} rows</button>
+        <button class="btn" @click="skipCSV">Skip this file</button>
+        <span class="sub">{{ csvMsg }}</span>
+      </div>
     </section>
 
     <section class="card">
@@ -221,8 +291,45 @@ function wipe() {
 .drop:focus-within {
   outline: 2px solid var(--focus);
 }
-code {
-  font-size: 13px;
+.reports {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: grid;
+  gap: 8px;
+}
+.reports li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.badge {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--surface-2);
+}
+.badge.ok {
+  color: var(--good);
+}
+.badge.warn {
+  color: var(--text-secondary);
+}
+.badge.error {
+  color: var(--bad);
+}
+.help {
+  margin-top: 14px;
+}
+.help summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
 }
 th select {
   font-weight: 400;

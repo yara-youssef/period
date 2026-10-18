@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watchEffect } from 'vue'
+import LogoMark from './components/LogoMark.vue'
 import CyclesView from './views/CyclesView.vue'
 import DashboardView from './views/DashboardView.vue'
 import ImportView from './views/ImportView.vue'
@@ -44,11 +45,7 @@ const nextTheme = () => (theme.value = theme.value === 'system' ? 'dark' : theme
 <template>
   <header class="top">
     <div class="brand">
-      <span class="logo" aria-hidden="true">
-        <span class="phase-dot phase-menstrual" /><span class="phase-dot phase-follicular" /><span class="phase-dot phase-ovulatory" /><span
-          class="phase-dot phase-luteal"
-        />
-      </span>
+      <LogoMark />
       <h1>Cycle Insights</h1>
     </div>
     <nav aria-label="Sections">
@@ -87,15 +84,6 @@ const nextTheme = () => (theme.value = theme.value === 'system' ? 'dark' : theme
 }
 .brand h1 {
   font-size: 18px;
-}
-.logo {
-  display: grid;
-  grid-template-columns: repeat(2, 8px);
-  gap: 2px;
-}
-.logo .phase-dot {
-  width: 8px;
-  height: 8px;
 }
 nav {
   display: flex;

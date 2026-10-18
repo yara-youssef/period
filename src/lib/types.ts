@@ -10,6 +10,8 @@ export interface DayRecord {
   steps?: number
   intensityMinutes?: number
   workoutMinutes?: number
+  /** Garmin activity types recorded that day, e.g. "Yoga", "Running". */
+  activityTypes?: string[]
   activeCalories?: number
   sleepMinutes?: number
   deepSleepMinutes?: number
@@ -26,9 +28,11 @@ export interface DayRecord {
   flow?: Flow
   symptoms?: string[]
   notes?: string
+  /** Fields filled from weekly summaries (spread over the week), to be replaced by daily data. */
+  weekly?: MetricKey[]
 }
 
-export type MetricKey = Exclude<keyof DayRecord, 'date' | 'flow' | 'symptoms' | 'notes'>
+export type MetricKey = Exclude<keyof DayRecord, 'date' | 'flow' | 'symptoms' | 'notes' | 'activityTypes' | 'weekly'>
 
 export interface PeriodStart {
   date: string

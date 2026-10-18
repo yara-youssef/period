@@ -3,7 +3,7 @@ import { buildCycleModel, derivePeriodStarts } from './lib/cycle'
 import { diffDays, todayISO } from './lib/dates'
 import { METRICS } from './lib/metrics'
 import { buildInsights, joinDays } from './lib/stats'
-import type { DayRecord, PeriodStart } from './lib/types'
+import type { DayRecord, MetricKey, PeriodStart } from './lib/types'
 
 const STORAGE_KEY = 'cycle-insights:v1'
 
@@ -58,10 +58,26 @@ export function upsertDay(date: string, fields: Partial<DayRecord>) {
   state.days[date] = next
 }
 
-export function mergeDays(days: Iterable<[string, Partial<DayRecord>]>): number {
+/**
+ * Merges imported days. Daily values replace earlier weekly estimates; weekly estimates only
+ * fill fields that have no daily value yet, and are remembered so later daily data replaces them.
+ */
+export function mergeDays(days: Iterable<[string, Partial<DayRecord>]>, opts: { weekly?: boolean } = {}): number {
   let n = 0
   for (const [date, fields] of days) {
-    upsertDay(date, fields)
+    const existing = state.days[date]
+    const weekly = new Set(existing?.weekly ?? [])
+    const next: Partial<DayRecord> = {}
+    for (const [k, v] of Object.entries(fields) as [keyof DayRecord, unknown][]) {
+      const key = k as MetricKey
+      if (opts.weekly) {
+        if (existing?.[k] !== undefined && !weekly.has(key)) continue
+        weekly.add(key)
+      } else weekly.delete(key)
+      ;(next as Record<string, unknown>)[k] = v
+    }
+    next.weekly = weekly.size ? [...weekly] : undefined
+    upsertDay(date, next)
     n++
   }
   return n
@@ -100,4 +116,15 @@ export const availableMetrics = computed(() => {
   for (const d of Object.values(state.days))
     for (const [k, v] of Object.entries(d)) if (typeof v === 'number') counts.set(k, (counts.get(k) ?? 0) + 1)
   return METRICS.filter((m) => (counts.get(m.key) ?? 0) >= 5)
+})
+
+/** Metrics where most values are spread-out weekly summaries rather than real daily values. */
+export const weeklyMetrics = computed(() => {
+  const total = new Map<string, number>()
+  const weekly = new Map<string, number>()
+  for (const d of Object.values(state.days)) {
+    for (const m of METRICS) if (typeof d[m.key] === 'number') total.set(m.key, (total.get(m.key) ?? 0) + 1)
+    for (const k of d.weekly ?? []) weekly.set(k, (weekly.get(k) ?? 0) + 1)
+  }
+  return METRICS.filter((m) => (weekly.get(m.key) ?? 0) > (total.get(m.key) ?? 0) / 2)
 })

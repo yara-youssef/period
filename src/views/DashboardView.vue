@@ -8,7 +8,7 @@ import PhaseTable from '@/components/PhaseTable.vue'
 import ProfileCard from '@/components/ProfileCard.vue'
 import TimelineCard from '@/components/TimelineCard.vue'
 import type { MetricKey } from '@/lib/types'
-import { availableMetrics, state } from '@/store'
+import { availableMetrics, state, weeklyMetrics } from '@/store'
 
 const profileMetric = ref<MetricKey>('mood')
 const timelineMetric = ref<MetricKey>('sleepMinutes')
@@ -36,6 +36,12 @@ const emit = defineEmits<{ go: [tab: string] }>()
       </div>
     </div>
     <div v-if="state.demo" class="card demo-note sub">You're looking at demo data. Clear it under Import &amp; data when you're ready to use your own.</div>
+
+    <div v-if="weeklyMetrics.length" class="card demo-note sub">
+      {{ weeklyMetrics.map((m) => m.label).join(', ') }}
+      {{ weeklyMetrics.length === 1 ? 'comes' : 'come' }} from weekly summaries, so phase differences look smaller than they really are, and they're left out of
+      "what helps". Import daily data (your Garmin export, or 4-week CSVs) to sharpen them.
+    </div>
 
     <NowCard />
     <div class="grid-2">

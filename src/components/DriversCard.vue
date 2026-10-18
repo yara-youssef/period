@@ -14,9 +14,9 @@ const rows = computed(() =>
     .map((d) => {
       const def = METRIC_BY_KEY[d.driver.key]
       return {
-        id: d.driver.key + d.driver.lag,
-        name: `${def.label}${d.driver.lag ? ' (day before)' : ''}`,
-        split: `${def.format(d.threshold)}${def.unit}`,
+        id: (d.driver.activity ?? d.driver.key) + d.driver.lag,
+        name: `${d.driver.activity ?? def.label}${d.driver.lag ? ' (day before)' : ''}`,
+        split: d.driver.activity ? 'did it / not' : `${def.format(d.threshold)}${def.unit}`,
         high: d.highMean,
         low: d.lowMean,
         r: d.r,
@@ -36,7 +36,9 @@ function strength(r: number) {
     <div class="card-head">
       <div>
         <h2>What moves your {{ outcome }}</h2>
-        <p class="sub">Each row splits your days at the middle value of that metric and compares {{ outcome }} above vs below it.</p>
+        <p class="sub">
+          Each row splits your days at the middle value of that metric (or into days you did / didn't do that activity) and compares {{ outcome }}.
+        </p>
       </div>
       <div style="display: flex; gap: 10px; flex-wrap: wrap">
         <div class="seg" role="group" aria-label="Outcome">

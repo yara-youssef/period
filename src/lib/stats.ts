@@ -118,6 +118,8 @@ const OUTCOMES: MetricKey[] = ['mood', 'energy']
 interface Driver {
   key: MetricKey
   lag: 0 | 1
+  /** Set for "did this activity type that day" drivers; the value is then 1 or 0. */
+  activity?: string
   /** Present when the driver is something you can choose to do more of. */
   action?: (threshold: string) => string
   /** How to describe a day where this driver was high, e.g. "after ≥ 7h sleep". */
@@ -150,22 +152,48 @@ export interface DriverResult {
   lowN: number
 }
 
+/** One yes/no driver per activity type done on at least 5 days in scope, e.g. "did yoga". */
+function activityDrivers(scope: JoinedDay[]): Driver[] {
+  const counts = new Map<string, number>()
+  for (const r of scope) for (const t of r.activityTypes ?? []) counts.set(t, (counts.get(t) ?? 0) + 1)
+  return [...counts]
+    .filter(([, n]) => n >= 5)
+    .flatMap(([type]) => {
+      const name = type.toLowerCase()
+      return ([0, 1] as const).map((lag) => ({
+        key: 'workoutMinutes' as MetricKey,
+        lag,
+        activity: type,
+        action: () => (lag ? `Fit in ${name} (it shows the next day)` : `Make room for ${name}`),
+        phrase: (_t: string, h: boolean) => (lag ? `the day after ${h ? '' : 'no '}${name}` : `on days ${h ? 'with' : 'without'} ${name}`),
+      }))
+    })
+}
+
+function driverValue(src: DayRecord | undefined, driver: Driver): number | undefined {
+  if (!src) return undefined
+  if (driver.activity) return src.activityTypes ? (src.activityTypes.includes(driver.activity) ? 1 : 0) : undefined
+  // Weekly summaries can't explain how one particular day felt.
+  if (src.weekly?.includes(driver.key)) return undefined
+  return src[driver.key]
+}
+
 export function driverAnalysis(rows: JoinedDay[], byDate: Map<string, DayRecord>, phase: Phase | null): DriverResult[] {
   const scope = phase ? rows.filter((r) => r.ph.phase === phase) : rows
   const results: DriverResult[] = []
+  const drivers = [...DRIVERS, ...activityDrivers(scope)]
   for (const outcome of OUTCOMES) {
-    for (const driver of DRIVERS) {
+    for (const driver of drivers) {
       const pairs: [number, number][] = []
       for (const r of scope) {
         const y = r[outcome]
-        const src = driver.lag ? byDate.get(addDays(r.date, -driver.lag)) : r
-        const x = src?.[driver.key]
+        const x = driverValue(driver.lag ? byDate.get(addDays(r.date, -driver.lag)) : r, driver)
         if (typeof x === 'number' && typeof y === 'number') pairs.push([x, y])
       }
       if (pairs.length < 10) continue
       const r = pearson(pairs)
       if (r == null) continue
-      const threshold = quantile(pairs.map((p) => p[0]), 0.5)!
+      const threshold = driver.activity ? 1 : quantile(pairs.map((p) => p[0]), 0.5)!
       const high = pairs.filter((p) => p[0] >= threshold).map((p) => p[1])
       const low = pairs.filter((p) => p[0] < threshold).map((p) => p[1])
       if (high.length < 4 || low.length < 4) continue
@@ -233,7 +261,7 @@ export function buildInsights(rows: JoinedDay[], byDate: Map<string, DayRecord>)
   const seen = new Set<string>()
   for (const d of driverAnalysis(rows, byDate, 'luteal')) {
     if (Math.abs(d.r) < 0.2) continue
-    const id = `${d.outcome}-${d.driver.key}`
+    const id = `${d.outcome}-${d.driver.activity ?? d.driver.key}`
     if (seen.has(id)) continue // keep only the stronger of same-day / next-day
     seen.add(id)
     const def = METRIC_BY_KEY[d.driver.key]
