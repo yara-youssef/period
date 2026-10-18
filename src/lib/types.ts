@@ -23,8 +23,14 @@ export interface DayRecord {
   bodyBattery?: number
 
   // Logged by hand
-  mood?: number // 1–5
-  energy?: number // 1–5
+  // 1–5 scales, see SCALES in metrics.ts
+  mood?: number
+  energy?: number
+  focus?: number
+  social?: number
+  body?: number
+  appetite?: number
+  anxiety?: number
   flow?: Flow
   symptoms?: string[]
   notes?: string
